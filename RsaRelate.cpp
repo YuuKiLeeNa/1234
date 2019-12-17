@@ -1,4 +1,3 @@
-#include"pch.h"
 #include"RsaRelate.h"
 #include "openssl/rsa.h"
 #include "openssl/pem.h"
@@ -120,13 +119,14 @@ std::string RsaRelate::pri_block_encrypt(const std::string & clearText)
 
 void RsaRelate::generateRSAKey(std::string strKey[2], int bits, const std::wstring&pubPath, const std::wstring&priPath)
 {
-	// ¹«Ë½ÃÜÔ¿¶Ô    
+	// å…¬ç§å¯†é’¥å¯¹    
 	size_t pri_len;
 	size_t pub_len;
 	char *pri_key = NULL;
 	char *pub_key = NULL;
 
-	// Éú³ÉÃÜÔ¿¶Ô    
+	srand(time(nullptr));
+	// ç”Ÿæˆå¯†é’¥å¯¹    
 	RSA *keypair = RSA_generate_key(bits, RSA_F4, NULL, NULL);
 	//RSA_generate_key_ex()
 	BIO *pri = BIO_new(BIO_s_mem());
@@ -135,11 +135,11 @@ void RsaRelate::generateRSAKey(std::string strKey[2], int bits, const std::wstri
 	PEM_write_bio_RSAPrivateKey(pri, keypair, NULL, NULL, 0, NULL, NULL);
 	PEM_write_bio_RSAPublicKey(pub, keypair);
 
-	// »ñÈ¡³¤¶È    
+	// èŽ·å–é•¿åº¦    
 	pri_len = BIO_pending(pri);
 	pub_len = BIO_pending(pub);
 
-	// ÃÜÔ¿¶Ô¶ÁÈ¡µ½×Ö·û´®    
+	// å¯†é’¥å¯¹è¯»å–åˆ°å­—ç¬¦ä¸²    
 	pri_key = (char *)malloc(pri_len + 1);
 	pub_key = (char *)malloc(pub_len + 1);
 
@@ -149,11 +149,11 @@ void RsaRelate::generateRSAKey(std::string strKey[2], int bits, const std::wstri
 	pri_key[pri_len] = '\0';
 	pub_key[pub_len] = '\0';
 
-	// ´æ´¢ÃÜÔ¿¶Ô    
+	// å­˜å‚¨å¯†é’¥å¯¹    
 	strKey[0] = pub_key;
 	strKey[1] = pri_key;
 
-	// ´æ´¢µ½´ÅÅÌ£¨ÕâÖÖ·½Ê½´æ´¢µÄÊÇbegin rsa public key/ begin rsa private key¿ªÍ·µÄ£©  
+	// å­˜å‚¨åˆ°ç£ç›˜ï¼ˆè¿™ç§æ–¹å¼å­˜å‚¨çš„æ˜¯begin rsa public key/ begin rsa private keyå¼€å¤´çš„ï¼‰  
 	FILE *pubFile = _wfopen(pubPath.c_str(), L"w");
 	if (pubFile == NULL)
 	{
@@ -172,7 +172,7 @@ void RsaRelate::generateRSAKey(std::string strKey[2], int bits, const std::wstri
 	fputs(pri_key, priFile);
 	fclose(priFile);
 
-	// ÄÚ´æÊÍ·Å  
+	// å†…å­˜é‡Šæ”¾  
 	RSA_free(keypair);
 	BIO_free_all(pub);
 	BIO_free_all(pri);
@@ -222,10 +222,10 @@ std::string RsaRelate::pub_encrypt(std::string &&clearText)
 	std::string strRet;
 	//RSA *rsa = NULL;
 	//BIO *keybio = BIO_new_mem_buf((unsigned char *)m_pubkey.c_str(), -1);
-	// ´Ë´¦ÓÐÈýÖÖ·½·¨  
-	// 1, ¶ÁÈ¡ÄÚ´æÀïÉú³ÉµÄÃÜÔ¿¶Ô£¬ÔÙ´ÓÄÚ´æÉú³Érsa  
-	// 2, ¶ÁÈ¡´ÅÅÌÀïÉú³ÉµÄÃÜÔ¿¶ÔÎÄ±¾ÎÄ¼þ£¬ÔÚ´ÓÄÚ´æÉú³Érsa  
-	// 3£¬Ö±½Ó´Ó¶ÁÈ¡ÎÄ¼þÖ¸ÕëÉú³Érsa  
+	// æ­¤å¤„æœ‰ä¸‰ç§æ–¹æ³•  
+	// 1, è¯»å–å†…å­˜é‡Œç”Ÿæˆçš„å¯†é’¥å¯¹ï¼Œå†ä»Žå†…å­˜ç”Ÿæˆrsa  
+	// 2, è¯»å–ç£ç›˜é‡Œç”Ÿæˆçš„å¯†é’¥å¯¹æ–‡æœ¬æ–‡ä»¶ï¼Œåœ¨ä»Žå†…å­˜ç”Ÿæˆrsa  
+	// 3ï¼Œç›´æŽ¥ä»Žè¯»å–æ–‡ä»¶æŒ‡é’ˆç”Ÿæˆrsa  
 	//RSA* pRSAPublicKey = RSA_new();
 	//rsa = PEM_read_bio_RSAPublicKey(keybio, &rsa, NULL, NULL);
 
@@ -235,12 +235,12 @@ std::string RsaRelate::pub_encrypt(std::string &&clearText)
 	char *encryptedText = (char *)malloc(len + 1);
 	memset(encryptedText, 0, len + 1);
 
-	// ¼ÓÃÜº¯Êý  
+	// åŠ å¯†å‡½æ•°  
 	int ret = RSA_public_encrypt(clearText.length(), (const unsigned char*)clearText.c_str(), (unsigned char*)encryptedText, m_rsa_pub, RSA_PKCS1_PADDING);
 	if (ret >= 0)
 		strRet = std::string(encryptedText, ret);
 
-	// ÊÍ·ÅÄÚ´æ  
+	// é‡Šæ”¾å†…å­˜  
 	free(encryptedText);
 	//BIO_free_all(keybio);
 	//RSA_free(rsa);
@@ -257,22 +257,22 @@ std::string RsaRelate::pri_decrypt(std::string &&cipherText)
 	//BIO *keybio;
 	//keybio = BIO_new_mem_buf((unsigned char *)m_prikey.c_str(), -1);
 
-	// ´Ë´¦ÓÐÈýÖÖ·½·¨  
-	// 1, ¶ÁÈ¡ÄÚ´æÀïÉú³ÉµÄÃÜÔ¿¶Ô£¬ÔÙ´ÓÄÚ´æÉú³Érsa  
-	// 2, ¶ÁÈ¡´ÅÅÌÀïÉú³ÉµÄÃÜÔ¿¶ÔÎÄ±¾ÎÄ¼þ£¬ÔÚ´ÓÄÚ´æÉú³Érsa  
-	// 3£¬Ö±½Ó´Ó¶ÁÈ¡ÎÄ¼þÖ¸ÕëÉú³Érsa  
+	// æ­¤å¤„æœ‰ä¸‰ç§æ–¹æ³•  
+	// 1, è¯»å–å†…å­˜é‡Œç”Ÿæˆçš„å¯†é’¥å¯¹ï¼Œå†ä»Žå†…å­˜ç”Ÿæˆrsa  
+	// 2, è¯»å–ç£ç›˜é‡Œç”Ÿæˆçš„å¯†é’¥å¯¹æ–‡æœ¬æ–‡ä»¶ï¼Œåœ¨ä»Žå†…å­˜ç”Ÿæˆrsa  
+	// 3ï¼Œç›´æŽ¥ä»Žè¯»å–æ–‡ä»¶æŒ‡é’ˆç”Ÿæˆrsa  
 	//rsa = PEM_read_bio_RSAPrivateKey(keybio, &rsa, NULL, NULL);
 
 	int len = RSA_size(m_rsa_pri);
 	char *decryptedText = (char *)malloc(len + 1);
 	memset(decryptedText, 0, len + 1);
 
-	// ½âÃÜº¯Êý  
+	// è§£å¯†å‡½æ•°  
 	int ret = RSA_private_decrypt(cipherText.length(), (const unsigned char*)cipherText.c_str(), (unsigned char*)decryptedText, m_rsa_pri, RSA_PKCS1_PADDING);
 	if (ret >= 0)
 		strRet = std::string(decryptedText, ret);
 
-	// ÊÍ·ÅÄÚ´æ  
+	// é‡Šæ”¾å†…å­˜  
 	free(decryptedText);
 	//BIO_free_all(keybio);
 	//RSA_free(rsa);
