@@ -1,8 +1,13 @@
+#include "pch.h"
 #include"RsaRelate.h"
 #include "openssl/rsa.h"
 #include "openssl/pem.h"
 #include<algorithm>
 #include<assert.h>
+#include<fstream>
+#include<string.h>
+#include<memory>
+#include<functional>
 
 #define RSA_HEAD 11
 
@@ -117,31 +122,43 @@ std::string RsaRelate::pri_block_encrypt(const std::string & clearText)
 	return result;
 }
 
-void RsaRelate::generateRSAKey(std::string strKey[2], int bits, const std::wstring&pubPath, const std::wstring&priPath)
-{
-	// 公私密钥对    
+void RsaRelate::generateRSAKey(std::string strKey[2], int bits, const std::string&pubPath, const std::string&priPath)
+{  
 	size_t pri_len;
 	size_t pub_len;
 	char *pri_key = NULL;
 	char *pub_key = NULL;
 
 	srand(time(nullptr));
-	// 生成密钥对    
-	RSA *keypair = RSA_generate_key(bits, RSA_F4, NULL, NULL);
+
+	RSA *keypair = RSA_new();
+	std::unique_ptr<RSA, void(*)(RSA*)> keypairfree(keypair, RSA_free);
+
+	int ret = 0;
+	BIGNUM* bne = BN_new();
+	std::unique_ptr<BIGNUM, void(*)(BIGNUM*)>bnefree(bne, BN_free);
+
+	ret = BN_set_word(bne, RSA_F4);
+	ret = RSA_generate_key_ex(keypair, bits, bne, NULL);
+
+
 	//RSA_generate_key_ex()
 	BIO *pri = BIO_new(BIO_s_mem());
+	std::unique_ptr<BIO, void(*)(BIO*)>prifree(pri, BIO_free_all);
+
 	BIO *pub = BIO_new(BIO_s_mem());
+	std::unique_ptr<BIO, void(*)(BIO*)>pubfree(pub, BIO_free_all);
 
 	PEM_write_bio_RSAPrivateKey(pri, keypair, NULL, NULL, 0, NULL, NULL);
 	PEM_write_bio_RSAPublicKey(pub, keypair);
 
-	// 获取长度    
 	pri_len = BIO_pending(pri);
 	pub_len = BIO_pending(pub);
 
-	// 密钥对读取到字符串    
 	pri_key = (char *)malloc(pri_len + 1);
+	std::unique_ptr<char[], std::function<void(char*)>>prikeyfree(pri_key, [](char*c) {free(c); });
 	pub_key = (char *)malloc(pub_len + 1);
+	std::unique_ptr<char[], std::function<void(char*)>>pubkeyfree(pub_key, [](char*c) {free(c); });
 
 	BIO_read(pri, pri_key, pri_len);
 	BIO_read(pub, pub_key, pub_len);
@@ -149,36 +166,25 @@ void RsaRelate::generateRSAKey(std::string strKey[2], int bits, const std::wstri
 	pri_key[pri_len] = '\0';
 	pub_key[pub_len] = '\0';
 
-	// 存储密钥对    
 	strKey[0] = pub_key;
 	strKey[1] = pri_key;
 
-	// 存储到磁盘（这种方式存储的是begin rsa public key/ begin rsa private key开头的）  
-	FILE *pubFile = _wfopen(pubPath.c_str(), L"w");
-	if (pubFile == NULL)
+    std::ofstream pubKeyStream(pubPath);
+    if (!pubKeyStream)
 	{
 		assert(false);
 		return;
 	}
-	fputs(pub_key, pubFile);
-	fclose(pubFile);
-
-	FILE *priFile = _wfopen(priPath.c_str(), L"w");
-	if (priFile == NULL)
+    pubKeyStream<<pub_key;
+	pubKeyStream.flush();
+    std::ofstream priKeyStream(priPath);
+    if (!priKeyStream)
 	{
 		assert(false);
 		return;
 	}
-	fputs(pri_key, priFile);
-	fclose(priFile);
-
-	// 内存释放  
-	RSA_free(keypair);
-	BIO_free_all(pub);
-	BIO_free_all(pri);
-
-	free(pri_key);
-	free(pub_key);
+    priKeyStream<<pri_key;
+	priKeyStream.flush();
 }
 
 std::string RsaRelate::pub_block_decrypt(const std::string & cipherText)
@@ -220,31 +226,17 @@ std::string RsaRelate::pub_encrypt(std::string &&clearText)
 	if (m_pubkey.empty() || clearText.empty())
 		return "";
 	std::string strRet;
-	//RSA *rsa = NULL;
-	//BIO *keybio = BIO_new_mem_buf((unsigned char *)m_pubkey.c_str(), -1);
-	// 此处有三种方法  
-	// 1, 读取内存里生成的密钥对，再从内存生成rsa  
-	// 2, 读取磁盘里生成的密钥对文本文件，在从内存生成rsa  
-	// 3，直接从读取文件指针生成rsa  
-	//RSA* pRSAPublicKey = RSA_new();
-	//rsa = PEM_read_bio_RSAPublicKey(keybio, &rsa, NULL, NULL);
-
 	int len = RSA_size(m_rsa_pub);
 
 
 	char *encryptedText = (char *)malloc(len + 1);
 	memset(encryptedText, 0, len + 1);
 
-	// 加密函数  
 	int ret = RSA_public_encrypt(clearText.length(), (const unsigned char*)clearText.c_str(), (unsigned char*)encryptedText, m_rsa_pub, RSA_PKCS1_PADDING);
 	if (ret >= 0)
 		strRet = std::string(encryptedText, ret);
 
-	// 释放内存  
 	free(encryptedText);
-	//BIO_free_all(keybio);
-	//RSA_free(rsa);
-
 	return strRet;
 }
 
@@ -253,30 +245,15 @@ std::string RsaRelate::pri_decrypt(std::string &&cipherText)
 	if (m_prikey.empty() || cipherText.empty())
 		return "";
 	std::string strRet;
-	//RSA *rsa = RSA_new();
-	//BIO *keybio;
-	//keybio = BIO_new_mem_buf((unsigned char *)m_prikey.c_str(), -1);
-
-	// 此处有三种方法  
-	// 1, 读取内存里生成的密钥对，再从内存生成rsa  
-	// 2, 读取磁盘里生成的密钥对文本文件，在从内存生成rsa  
-	// 3，直接从读取文件指针生成rsa  
-	//rsa = PEM_read_bio_RSAPrivateKey(keybio, &rsa, NULL, NULL);
-
 	int len = RSA_size(m_rsa_pri);
 	char *decryptedText = (char *)malloc(len + 1);
 	memset(decryptedText, 0, len + 1);
 
-	// 解密函数  
 	int ret = RSA_private_decrypt(cipherText.length(), (const unsigned char*)cipherText.c_str(), (unsigned char*)decryptedText, m_rsa_pri, RSA_PKCS1_PADDING);
 	if (ret >= 0)
 		strRet = std::string(decryptedText, ret);
 
-	// 释放内存  
 	free(decryptedText);
-	//BIO_free_all(keybio);
-	//RSA_free(rsa);
-
 	return std::move(strRet);
 }
 
