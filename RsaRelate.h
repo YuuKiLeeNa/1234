@@ -1,4 +1,7 @@
-#pragma once
+#ifndef __RSARELATE_H__
+#define __RSARELATE_H__
+
+
 #include<vector>
 #include<string>
 #include "openssl/rsa.h"
@@ -15,7 +18,7 @@ public:
 	std::string pub_stream_decrypt(const std::string &cipherText);
 	std::string pri_block_encrypt(const std::string &clearText);
 
-	static void generateRSAKey(std::string strKey[2], int bits = 2048, const std::wstring&pubPath = L"pubkey.pem", const std::wstring&priPath=L"prikey.pem");
+	static void generateRSAKey(std::string strKey[2], int bits = 2048, const std::string &pubPath = "pubkey.pem", const std::string&priPath="prikey.pem");
 
 protected:
 	std::string pub_block_decrypt(const std::string &cipherText);
@@ -39,3 +42,5 @@ protected:
 	std::string m_pubkey_deLeftString;
 	std::string m_prikey_deLeftString;
 };
+
+#endif
