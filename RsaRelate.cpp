@@ -19,6 +19,7 @@ RsaRelate::RsaRelate(const std::string &pubKey, const std::string &priKey):m_pub
 	if (!pubKey.empty()) 
 	{
 		BIO *keybio = BIO_new_mem_buf((unsigned char *)m_pubkey.c_str(), -1);
+		//m_rsa_pub = PEM_read_bio_RSA_PUBKEY(keybio, &m_rsa_pub, NULL, NULL);
 		m_rsa_pub = PEM_read_bio_RSAPublicKey(keybio, &m_rsa_pub, NULL, NULL);
 		BIO_free(keybio);
 	}
